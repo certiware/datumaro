@@ -8,7 +8,7 @@ import logging as log
 import os.path as osp
 import sys
 
-from ..version import VERSION
+from datumaro.version import VERSION
 from . import commands, contexts
 from .util import CliException, add_subparser
 

@@ -38,14 +38,14 @@ def get_requirements():
     with open('requirements-core.txt') as fh:
         requirements = [fh.read()]
 
-    if strtobool(os.getenv('DATUMARO_HEADLESS', '0').lower()):
+    if strtobool(os.getenv('POSEMARO_HEADLESS', '0').lower()):
         requirements.append('opencv-python-headless')
     else:
         requirements.append('opencv-python')
 
     return requirements
 
-with open('README.md', 'r') as fh:
+with open('README.md', 'r', encoding='UTF8' ) as fh:
     long_description = fh.read()
 
 setuptools.dist.Distribution().fetch_build_eggs([
@@ -53,14 +53,14 @@ setuptools.dist.Distribution().fetch_build_eggs([
 ])
 
 setuptools.setup(
-    name="datumaro",
+    name="posemaro",
     version=find_version(here),
-    author="Intel",
-    author_email="maxim.zhiltsov@intel.com",
-    description="Dataset Management Framework (Datumaro)",
+    author="certiware",
+    author_email="certiware.study@gmail.com",
+    description="Dataset Management Framework (Posemaro)",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/openvinotoolkit/datumaro",
+    url="https://github.com/certiware/datumaro",
     packages=setuptools.find_packages(exclude=['tests*']),
     classifiers=[
         "Programming Language :: Python :: 3",
@@ -78,5 +78,4 @@ setuptools.setup(
             'datum=datumaro.cli.__main__:main',
         ],
     },
-    include_package_data=True,
 )
