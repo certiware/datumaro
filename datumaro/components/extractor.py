@@ -16,10 +16,12 @@ from datumaro.util.attrs_util import default_if_none, not_empty
 from datumaro.util.image import Image
 
 
+# 각 type을 분류하고 enum 을 통해 id를 자동 부여
 class AnnotationType(Enum):
     label = auto()
     mask = auto()
     points = auto()
+    keypoints = auto()
     polygon = auto()
     polyline = auto()
     bbox = auto()
@@ -28,6 +30,10 @@ class AnnotationType(Enum):
 
 _COORDINATE_ROUNDING_DIGITS = 2
 
+# @attrs 사용 이유
+# declaratively define the attributes on that class
+#
+# https://www.attrs.org/en/stable/examples.html
 @attrs(kw_only=True)
 class Annotation:
     id = attrib(default=0, validator=default_if_none(int))
@@ -69,7 +75,6 @@ class LabelCategories(Categories):
             2)list of str - will interpreted as list of Category names
             3)list of positional arguments - will generate Categories
             with this arguments
-
 
         Returns:
             LabelCategories: LabelCategories object
@@ -530,42 +535,131 @@ class PointsCategories(Categories):
         joints = set(map(tuple, joints))
         self.items[label_id] = self.Category(labels, joints)
 
+ # -------------------------------------------------------------------------------------------------
+# anno_points, anno_label, anno_attr, anno_group
+@attrs
+class KeyPoints(_Shape):
+    class Visibility(Enum):
+        absent = 0 # 부재
+        hidden = 1 # 숨김
+        visible = 2 # 보임
+
+    #_type = AnnotationType.points
+    _type = AnnotationType.keypoints
+
+    visibility = attrib(type=list, default=None)
+    @visibility.validator
+    def _visibility_validator(self, attribute, visibility):
+        print(visibility)
+        if visibility is None:
+            vis_points = self.points[:-4]
+            visibility_tot = []
+            for i in range(len(vis_points)//2):
+                if self.points[::2][i] == -1.0:
+                    visibility_tot.append(self.Visibility.absent)
+                else:
+                    visibility_tot.append(self.Visibility.visible)
+        else:
+            for i, v in enumerate(visibility):
+                if not isinstance(v, self.Visibility):
+                    visibility[i] = self.Visibility(v)
+        assert len(visibility_tot) == len(vis_points) // 2
+
+        print(visibility_tot)
+
+        self.visibility = visibility_tot
+
+
+    def __attrs_post_init__(self):
+        super().__attrs_post_init__() # None
+        assert len(self.points) % 2 == 0, self.points
+
+    def get_area(self):
+        return 0
+
+    # keypoint bbox
+    # def get_bbox(self):
+    #     xs = [p for p, v in zip(self.points[0::2], self.visibility)
+    #         if v != __class__.Visibility.absent]
+    #     ys = [p for p, v in zip(self.points[1::2], self.visibility)
+    #         if v != __class__.Visibility.absent]
+    #     x0 = min(xs, default=0)
+    #     x1 = max(xs, default=0)
+    #     y0 = min(ys, default=0)
+    #     y1 = max(ys, default=0)
+    #     return [x0, y0, x1 - x0, y1 - y0]
+
+    # 조건
+    # 1. 공유된 Rectangle, points 의 두가지 point를 사용하여 Rectangle일 경우에 해당 point의 값을 넘겨준다
+    # 2. type에 따른 분류 point 분류
+    # 3. db에 저장된 point return
+    def get_bbox(self):
+        _type = AnnotationType.bbox
+        # print(_type) # AnnotationType.bbox
+        #
+        # print(super().__attrs_post_init__())  # None
+        # print(self._type) # AnnotationType.points
+
+        total_points = []
+        # print(self.points)
+        for p in self.points:
+            total_points.append(p)
+
+        print(total_points)
+        # if (_type == AnnotationType.bbox and AnnotationType.points) {
+        #      bbox = []
+        # }
+        if self.type == AnnotationType.keypoints:
+            key_bbox = self.points[-4:]
+            print(key_bbox)
+        # bbox = [100, 200, 300, 400]
+
+            x = key_bbox[0]
+            y = key_bbox[1]
+            w = key_bbox[2]
+            h = key_bbox[3]
+
+            return [x, y, w, h]
+
 @attrs
 class Points(_Shape):
     class Visibility(Enum):
-        absent = 0
-        hidden = 1
-        visible = 2
+        absent = 0 # 부재
+        hidden = 1 # 숨김
+        visible = 2 # 보임
 
     _type = AnnotationType.points
 
     visibility = attrib(type=list, default=None)
     @visibility.validator
     def _visibility_validator(self, attribute, visibility):
+        print(visibility)
         if visibility is None:
-            visibility = [self.Visibility.visible] * (len(self.points) // 2)
+            vis_points = self.points[:-4]
+            visibility_tot = []
+            for i in range(len(vis_points)//2):
+                if self.points[::2][i] == -1.0:
+                    visibility_tot.append(self.Visibility.absent)
+                else:
+                    visibility_tot.append(self.Visibility.visible)
         else:
             for i, v in enumerate(visibility):
                 if not isinstance(v, self.Visibility):
                     visibility[i] = self.Visibility(v)
-        assert len(visibility) == len(self.points) // 2
-        self.visibility = visibility
+        assert len(visibility_tot) == len(vis_points) // 2
+
+        self.visibility = visibility_tot
+
 
     def __attrs_post_init__(self):
-        super().__attrs_post_init__()
+        super().__attrs_post_init__() # None
         assert len(self.points) % 2 == 0, self.points
 
     def get_area(self):
         return 0
 
     def get_bbox(self):
-        key_bbox = self.points[-4:]
-        x = key_bbox[0]
-        y = key_bbox[1]
-        w = key_bbox[2]
-        h = key_bbox[3]
-
-        return [x, y, w, h]
+        return [0,0,0,0]
 
 @attrs
 class Caption(Annotation):
@@ -577,10 +671,13 @@ DEFAULT_SUBSET_NAME = 'default'
 
 @attrs
 class DatasetItem:
+    # id, image, subset, attribute, annotations [mask, points],
     id = attrib(converter=lambda x: str(x).replace('\\', '/'),
         type=str, validator=not_empty)
     annotations = attrib(factory=list, validator=default_if_none(list))
+    # annotations [extractor [mask, point, polyline, cuboid3d, polygon, bbox, caption]]
     subset = attrib(converter=lambda v: v or DEFAULT_SUBSET_NAME, default=None)
+    # subset ='train', 'val', 'test', 'default'
 
     # Currently unused
     path = attrib(factory=list, validator=default_if_none(list))
@@ -591,23 +688,27 @@ class DatasetItem:
     point_cloud = attrib(type=str, default=None)
     related_images = attrib(type=List[Image], default=None)
 
+    # init both
     def __attrs_post_init__(self):
         if (self.has_image and self.has_point_cloud):
             raise ValueError("Can't set both image and point cloud info")
         if self.related_images and not self.has_point_cloud:
             raise ValueError("Related images require point cloud")
-
+    #
     def _image_converter(image):
+        # image를 함수호출 또는 인스턴스가 존재할 때
         if callable(image) or isinstance(image, np.ndarray):
             image = Image(data=image)
+        # 인스턴스가 문자열 형태로 존재
         elif isinstance(image, str):
             image = Image(path=image)
+        # image가 없거나 image/image 형태로 존재할 때 제외
         assert image is None or isinstance(image, Image), type(image)
         return image
     image.converter = _image_converter
 
     def _related_image_converter(images):
-        return list(map(__class__._image_converter, images or []))
+        return list(map(__class__._image_converter, images or [])) # 클래스의 _image_converter를 참조
     related_images.converter = _related_image_converter
 
     @point_cloud.validator
@@ -684,9 +785,6 @@ class Extractor(IExtractor):
         if self._subsets is None:
             self._init_cache()
         if name in self._subsets:
-            if len(self._subsets) == 1:
-                return self
-
             return self.select(lambda item: item.subset == name)
         else:
             raise Exception("Unknown subset '%s', available subsets: %s" % \

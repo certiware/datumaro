@@ -91,6 +91,8 @@ class _TaskConverter:
 
     def save_categories(self, dataset):
         raise NotImplementedError()
+    # NotImplementedError()
+    # 상위 클래스를 설계할 때, 하위 클래스에서 반드시 오버라이드하여 상세하게 구현해야 하는 메소드를 명시하고자 할떄
 
     def save_annotations(self, item):
         raise NotImplementedError()
@@ -374,7 +376,7 @@ class _KeypointsConverter(_InstancesConverter):
 
     def save_annotations(self, item):
         point_annotations = [a for a in item.annotations
-            if a.type == AnnotationType.points]
+            if a.type == AnnotationType.points or a.type == AnnotationType.keypoints]
         if not point_annotations:
             return
 
@@ -395,7 +397,7 @@ class _KeypointsConverter(_InstancesConverter):
 
         for g_id, group in groupby(annotations, lambda a: a.group):
             if not g_id or g_id and not cls.find_instance_anns(group):
-                group = [a for a in group if a.type == AnnotationType.points]
+                group = [a for a in group if a.type == AnnotationType.points or a.type == AnnotationType.keypoints]
                 solitary_points.extend(group)
 
         return solitary_points
@@ -403,16 +405,24 @@ class _KeypointsConverter(_InstancesConverter):
     @staticmethod
     def convert_points_object(ann):
         keypoints = []
-        points = ann.points[:-4]
-        visibility = ann.visibility[:-2]
+        if ann.type == AnnotationType.keypoints:
+            points = ann.points[:-4]
+        else:
+            points = ann.points
+
+        visibility = ann.visibility
+        print(visibility)
         for index in range(0, len(points), 2):
             kp = points[index : index + 2]
+            # print(kp)
             state = visibility[index // 2].value
+            # print(state)
             keypoints.extend([*kp, state])
 
         num_annotated = len([v for v in visibility \
             if v != Points.Visibility.absent])
 
+        print(keypoints)
         return {
             'keypoints': keypoints,
             'num_keypoints': num_annotated,
