@@ -557,6 +557,8 @@ class KeyPoints(_Shape):
             for i in range(len(vis_points)//2):
                 if self.points[::2][i] == -1.0:
                     visibility_tot.append(self.Visibility.absent)
+                elif self.points[::2][i] == 0.0 and self.points[1::2][i] == 0.0: 
+                    visibility_tot.append(self.Visibility.absent)
                 else:
                     visibility_tot.append(self.Visibility.visible)
         else:
