@@ -644,7 +644,9 @@ class CocoConverter(Converter):
             for task in (self._tasks or self._TASK_CONVERTER) }
 
     def _get_image_id(self, item):
-        image_id = self._image_ids.get(item.id)
+
+        # image_id = self._image_ids.get(item.id) # 이미지 이름과 상관없이 1, 2, 3 번으로 id 지정
+        image_id = int(item.id) #이미지 이름의 고유 번호를 사용하기 위함. item.id = 0000001234 -> 1234 로 사용하기 위함
         if image_id is None:
             if not self._reindex:
                 image_id = cast(item.attributes.get('id'), int,
