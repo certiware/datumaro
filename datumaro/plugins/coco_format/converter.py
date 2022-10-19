@@ -647,7 +647,11 @@ class CocoConverter(Converter):
     def _get_image_id(self, item):
 
         if '000000' in item.id:
-            image_id = int(re.sub(r'[^0-9]','',item.id)) #이미지 이름의 고유 번호를 사용하기 위함. item.id = 0000001234 -> 1234 로 사용하기 위함
+            if '/' in item.id:
+                k = item.id.rfind("/")
+                image_id = int(re.sub(r'[^0-9]','',item.id[k:])) #이미지 이름의 고유 번호를 사용하기 위함. item.id = 0000001234 -> 1234 로 사용하기 위함
+            else:
+                image_id = int(re.sub(r'[^0-9]','',item.id))
         else:
             image_id = self._image_ids.get(item.id) # 이미지 이름과 상관없이 1, 2, 3 번으로 id 지정
 
