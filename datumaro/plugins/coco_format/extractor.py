@@ -14,7 +14,7 @@ import pycocotools.mask as mask_utils
 from datumaro.components.extractor import (
     DEFAULT_SUBSET_NAME, AnnotationType, Bbox, Caption, CompiledMask,
     DatasetItem, Label, LabelCategories, Mask, Points, PointsCategories,
-    Polygon, RleMask, SourceExtractor,
+    Polygon, RleMask, SourceExtractor,KeyPoints
 )
 from datumaro.util.image import Image, lazy_image, load_image
 from datumaro.util.mask_tools import bgr2index
@@ -223,14 +223,24 @@ class _CocoExtractor(SourceExtractor):
 
             if self._task is CocoTask.person_keypoints:
                 keypoints = ann['keypoints']
-                points = [p for i, p in enumerate(keypoints) if i % 3 != 2]
-                visibility = keypoints[2::3]
-                parsed_annotations.append(
-                    Points(points, visibility, label=label_id,
-                        id=ann_id, attributes=attributes, group=group)
-                )
+                if ann['bbox'] == [0.0, 0.0, 0.0, 0.0]:
+                    points = [p for i, p in enumerate(keypoints) if i % 3 != 2] #진짜 포인트만
+                    visibility = keypoints[2::3]
+                    parsed_annotations.append(
+                        Points(points, visibility, label=label_id,
+                            id=ann_id, attributes=attributes, group=group)
+                    )
+                else:
+                    points = [p for i, p in enumerate(keypoints) if i % 3 != 2]
+                    points.extend(ann['bbox'])
+                    visibility = keypoints[2::3]
+                    parsed_annotations.append(
+                        KeyPoints(points, visibility, label=label_id,
+                            id=ann_id, attributes=attributes, group=group)
+                    )
 
             segmentation = ann.get('segmentation')
+
             if segmentation and segmentation != [[]]:
                 rle = None
 
@@ -272,10 +282,13 @@ class _CocoExtractor(SourceExtractor):
                         id=ann_id, attributes=attributes, group=group
                     ))
             else:
-                parsed_annotations.append(
-                    Bbox(x, y, w, h, label=label_id,
-                        id=ann_id, attributes=attributes, group=group)
-                )
+                if ann['keypoints']:
+                    pass
+                else:
+                    parsed_annotations.append(
+                        Bbox(x, y, w, h, label=label_id,
+                            id=ann_id, attributes=attributes, group=group)
+                    )
         elif self._task is CocoTask.labels:
             label_id = self._get_label_id(ann)
             parsed_annotations.append(

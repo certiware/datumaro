@@ -456,6 +456,8 @@ class Bbox(_Shape):
     def __init__(self, x, y, w, h, *args, **kwargs):
         kwargs.pop('points', None) # comes from wrap()
         self.__attrs_init__([x, y, x + w, y + h], *args, **kwargs)
+        #self.__attrs_init__([x, y, w, h], *args, **kwargs)
+
     __actual_init__ = __init__ # save pointer
 
     @property
@@ -557,14 +559,18 @@ class KeyPoints(_Shape):
             for i in range(len(vis_points)//2):
                 if self.points[::2][i] == -1.0:
                     visibility_tot.append(self.Visibility.absent)
-                elif self.points[::2][i] == 0.0 and self.points[1::2][i] == 0.0: 
+                elif self.points[::2][i] == 0.0 and self.points[1::2][i] == 0.0:
                     visibility_tot.append(self.Visibility.absent)
                 else:
                     visibility_tot.append(self.Visibility.visible)
         else:
+            vis_points = self.points[:-4]
+
             for i, v in enumerate(visibility):
                 if not isinstance(v, self.Visibility):
                     visibility[i] = self.Visibility(v)
+            visibility_tot = visibility
+
         assert len(visibility_tot) == len(vis_points) // 2
 
         print(visibility_tot)
@@ -637,7 +643,7 @@ class Points(_Shape):
     def _visibility_validator(self, attribute, visibility):
         print(visibility)
         if visibility is None:
-            vis_points = self.points[:-4]
+            vis_points = self.points
             visibility_tot = []
             for i in range(len(vis_points)//2):
                 if self.points[::2][i] == -1.0:
@@ -645,9 +651,11 @@ class Points(_Shape):
                 else:
                     visibility_tot.append(self.Visibility.visible)
         else:
+            vis_points = self.points
             for i, v in enumerate(visibility):
                 if not isinstance(v, self.Visibility):
                     visibility[i] = self.Visibility(v)
+            visibility_tot = visibility
         assert len(visibility_tot) == len(vis_points) // 2
 
         self.visibility = visibility_tot
