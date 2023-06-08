@@ -282,7 +282,7 @@ class _CocoExtractor(SourceExtractor):
                         id=ann_id, attributes=attributes, group=group
                     ))
             else:
-                if ann['keypoints']:
+                if 'keypoints' in ann:
                     pass
                 else:
                     parsed_annotations.append(
